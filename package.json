@@ -1,0 +1,16 @@
+{
+  "name": "student-portal",
+  "version": "1.0.0",
+  "description": "Minimal Student Portal (login, profile, search) with SQLite — zero-dependency demo base for a DevSecOps pipeline.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}
