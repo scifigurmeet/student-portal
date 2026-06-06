@@ -1,0 +1,58 @@
+name: DevSecOps Pipeline
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history so secret scanning sees all commits
+
+      # ---- GATE 1: Secret scanning ----
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+
+      # ---- GATE 2: SAST ----
+      - name: SAST (Semgrep)
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten
+
+      # ---- GATE 3: Dependency scan ----
+      - name: Dependency scan (npm audit)
+        run: npm audit --audit-level=high
+
+      # ---- Build the image ----
+      - name: Build image
+        run: docker build -t secure-portal:${{ github.sha }} .
+
+      # ---- GATE 4: Image scan ----
+      - name: Image scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: secure-portal:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # ---- GATE 5: Config / compliance scan ----
+      - name: Config scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+
+      # ---- Deploy only if every gate passed ----
+      - name: Deploy (placeholder)
+        if: success()
+        run: echo "All gates passed — deploying. Secret is fetched from Vault at runtime."
